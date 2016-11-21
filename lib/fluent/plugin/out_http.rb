@@ -3,7 +3,7 @@ class Fluent::HTTPOutput < Fluent::Output
 
   def initialize
     super
-    require 'net/http'
+    require 'net/http/persistent'
     require 'uri'
     require 'yajl'
   end
@@ -66,6 +66,7 @@ class Fluent::HTTPOutput < Fluent::Output
 
   def start
     super
+    @pers = Net::HTTP::Persistent.new()
   end
 
   def shutdown
@@ -73,7 +74,10 @@ class Fluent::HTTPOutput < Fluent::Output
   end
 
   def format_url(tag, time, record)
-    @endpoint_url
+    if tag == @remove_prefix or @remove_prefix and (tag[0, @remove_prefix_length] == @remove_prefix_string and tag.length > @remove_prefix_length)
+	tag = tag[@remove_prefix_length..-1]
+    end
+    "%s?tag=%s&timestamp=%s" % [@endpoint_url, tag, time]
   end
 
   def set_body(req, tag, time, record)
@@ -97,7 +101,7 @@ class Fluent::HTTPOutput < Fluent::Output
   def create_request(tag, time, record)
     url = format_url(tag, time, record)
     uri = URI.parse(url)
-    req = Net::HTTP.const_get(@http_method.to_s.capitalize).new(uri.path)
+    req = Net::HTTP.const_get(@http_method.to_s.capitalize).new(uri.path + "?" + uri.query)
     set_body(req, tag, time, record)
     set_header(req, tag, time, record)
     return req, uri
@@ -128,7 +132,7 @@ class Fluent::HTTPOutput < Fluent::Output
       res = Net::HTTP.start(uri.host, uri.port, **http_opts(uri)) {|http| http.request(req) }
     rescue => e # rescue all StandardErrors
       # server didn't respond
-      $log.warn "Net::HTTP.#{req.method.capitalize} raises exception: #{e.class}, '#{e.message}'"
+      $log.warn "Exception: #{e.to_s}"
       raise e if @raise_on_error
     else
        unless res and res.is_a?(Net::HTTPSuccess)
