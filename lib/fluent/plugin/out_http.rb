@@ -14,6 +14,9 @@ class Fluent::HTTPOutput < Fluent::Output
   # Set Net::HTTP.verify_mode to `OpenSSL::SSL::VERIFY_NONE`
   config_param :ssl_no_verify, :bool, :default => false
 
+  # Endpoint URL ex. localhost.local/api/
+  config_param :remove_prefix, :string, :default => nil
+
   # HTTP method
   config_param :http_method, :string, :default => :post
 
@@ -62,6 +65,11 @@ class Fluent::HTTPOutput < Fluent::Output
             end
 
     @last_request_time = nil
+
+    if @remove_prefix
+       @remove_prefix_string = @remove_prefix + '.'
+       @remove_prefix_length = @remove_prefix_string.length
+    end
   end
 
   def start
@@ -129,7 +137,7 @@ class Fluent::HTTPOutput < Fluent::Output
         req.basic_auth(@username, @password)
       end
       @last_request_time = Time.now.to_f
-      res = Net::HTTP.start(uri.host, uri.port, **http_opts(uri)) {|http| http.request(req) }
+      res = @pers.request(uri,req)
     rescue => e # rescue all StandardErrors
       # server didn't respond
       $log.warn "Exception: #{e.to_s}"
