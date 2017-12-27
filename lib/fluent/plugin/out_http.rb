@@ -85,7 +85,12 @@ class Fluent::HTTPOutput < Fluent::Output
     if tag == @remove_prefix or @remove_prefix and (tag[0, @remove_prefix_length] == @remove_prefix_string and tag.length > @remove_prefix_length)
 	tag = tag[@remove_prefix_length..-1]
     end
-    "%s?tag=%s&timestamp=%s" % [@endpoint_url, tag, time]
+    url = "%s?tag=%s" % [@endpoint_url, tag]
+    if time.responds_to?('sec') and time.responds_to?('nsec')
+        "%s&timestamp=%s&nstimestamp=%s" % [url, time.sec(), time.nsec()]
+    else
+        "%s&timestamp=%s" % [url, time]
+    end
   end
 
   def set_body(req, tag, time, record)
