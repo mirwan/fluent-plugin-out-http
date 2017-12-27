@@ -86,7 +86,7 @@ class Fluent::HTTPOutput < Fluent::Output
 	tag = tag[@remove_prefix_length..-1]
     end
     url = "%s?tag=%s" % [@endpoint_url, tag]
-    if time.responds_to?('sec') and time.responds_to?('nsec')
+    if time.respond_to?('sec') and time.respond_to?('nsec')
         "%s&timestamp=%s&nstimestamp=%s" % [url, time.sec(), time.nsec()]
     else
         "%s&timestamp=%s" % [url, time]
