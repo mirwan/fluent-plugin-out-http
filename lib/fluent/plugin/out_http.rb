@@ -27,6 +27,9 @@ class Fluent::HTTPOutput < Fluent::Output
   # since the last one.
   config_param :rate_limit_msec, :integer, :default => 0
 
+  # max_requests after which the http connection is closed
+  config_param :max_requests, :integer, :default => nil
+
   # Raise errors that were rescued during HTTP requests?
   config_param :raise_on_error, :bool, :default => true
 
@@ -75,6 +78,7 @@ class Fluent::HTTPOutput < Fluent::Output
   def start
     super
     @pers = Net::HTTP::Persistent.new()
+    @pers.max_requests = @max_requests
   end
 
   def shutdown
